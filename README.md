@@ -1,43 +1,77 @@
 # CRAWL TOPCV JOBS (Learning Purposes)
 
-Crawler nhẹ nhàng để thu thập tin tuyển dụng **Data Analyst** trên TopCV, tự động ghép **chi tiết job** + **thông tin công ty** vào một **Pandas DataFrame**, xuất **CSV/XLSX**.
+Crawler nhẹ nhàng để thu thập tin tuyển dụng **Data Analyst** trên TopCV, tự động ghép **chi tiết job** + **thông tin công ty** vào một **Pandas DataFrame**, xuất **CSV/XLSX**, và (mới) **orchestrate bằng Airflow**.
+
+---
+
+## 😎 Kiến trúc pipeline
+![Pipeline Architecture](imgs/00-architect.png)
+
+---
 
 ## ✅ Tính năng
 
 * Crawl từ trang search (đa trang).
 * Vào từng `job_url` lấy: mức lương, địa điểm, kinh nghiệm, deadline, mô tả/yêu cầu/quyền lợi, tag, địa chỉ & thời gian làm việc.
-* Vào `company_url` (nếu có) lấy: tên, website, quy mô, lĩnh vực, địa chỉ, mô tả.
-* Chống **429 Too Many Requests** bằng delay ngẫu nhiên (nhẹ nhàng).
-* Xuất **CSV** (và dễ mở rộng sang XLSX).
+* Vào `company_url` lấy: tên, website, quy mô, lĩnh vực, địa chỉ, mô tả.
+* Chống **429 Too Many Requests** bằng delay ngẫu nhiên.
+* Xuất **CSV/XLSX**.
+* **Airflow DAG** tự động hóa pipeline:
+  * B1: chạy scraper (Python script).
+  * B2: lưu CSV/XLSX.
+  * B3: đẩy dữ liệu lên Google Sheets.
 
 ---
 
 ## 🧱 Cấu trúc project
 
 ```
+
 .
 ├── airflow
-│   ├── dags
-│   ├── docker-compose.yml
-│   ├── Dockerfile
-│   └── requirements.txt
-├── scripts
-│   ├── scrape_topcv_company.py # Script chính
-│   └── topcv.ipynb # Notebook thử nghiệm
-├── data-files
-│   ├── topcv_data_analyst_jobs.csv  # Kết quả CSV (ví dụ)
-│   └── topcv_data_analyst_jobs.xlsx # Kết quả XLSX (tuỳ chọn)
+│   ├── dags/                  # DAGs (run\_scrape\_topcv\_\*.py)
+│   ├── docker-compose.yaml    # Compose stack
+│   ├── Dockerfile             # Custom Airflow image
+│   ├── requirements.txt       # Thư viện cài thêm trong Airflow
+│   └── logs/                  # Logs của Airflow
+├── scripts/
+│   ├── scrape\_topcv\_company.py  # Script crawl chính
+│   └── topcv.ipynb              # Notebook thử nghiệm
+├── data-files/
+│   ├── topcv\_data\_analyst\_jobs.csv
+│   ├── topcv\_data\_analyst\_jobs.xlsx
+│   └── \~\$topcv\_data\_analyst\_jobs.xlsx
+├── credentials/
+│   └── google-service-account-sample.json  # Service Account cho Google Sheets: https://cloud.google.com/iam/docs/service-accounts-create
+├── imgs/                         # Hình minh họa
+│   ├── 00-architect.png
+│   ├── 01-excel.png
+│   └── 02-airflow\.png
 ├── pyproject.toml
-├── README.md
-└── uv.lock
-```
+├── uv.lock
+└── README.md
+
+````
+
+---
+
+## 📸 Hình minh họa kết quả
+
+### Kết quả CSV/XLSX
+![Excel Output](imgs/01-excel.png)
+
+### Kết quả Google Sheets
+![Google Sheets Output](imgs/02-google-sheets.png)
+
+### Airflow DAG
+![Airflow DAG](imgs/03-airflow.png)
 
 ---
 
 ## 🛠️ Yêu cầu
 
-* Python 3.8+
-* [uv](https://github.com/astral-sh/uv) (quản lý môi trường & dependency)
+* Python 3.8+  
+* [uv](https://github.com/astral-sh/uv) (quản lý môi trường & dependency)  
 * (Tuỳ chọn) Google Chrome + ChromeDriver nếu bạn dùng Selenium thay vì `requests`/`BeautifulSoup`.
 
 ---
@@ -49,7 +83,7 @@ Crawler nhẹ nhàng để thu thập tin tuyển dụng **Data Analyst** trên 
 ```bash
 uv init crawl-topcv-jobs
 cd crawl-topcv-jobs
-```
+````
 
 ### Bước 2 — Cài thư viện
 
@@ -100,7 +134,7 @@ uv run scrape_topcv_company.py
 Kết quả:
 
 * In ra `head()` của DataFrame
-* Lưu `topcv_data_analyst_jobs.csv` (UTF-8-SIG) trong thư mục hiện tại.
+* Lưu `topcv_data_analyst_jobs.csv` (UTF-8-SIG) trong thư mục `data-files/`
 
 > Muốn đổi số trang, sửa nhanh trong `__main__`:
 
@@ -120,7 +154,7 @@ Script có hai “điểm nghỉ”:
 
 > Nếu vẫn bị 429:
 
-* Tăng delay (ví dụ `smart_sleep(0.5, 1.0)`, `delay_between_pages=(0.5, 1.0)`).
+* Tăng delay (ví dụ `smart_sleep(1, 2)`, `delay_between_pages=(2, 3)`).
 * Thu hẹp số trang; chạy ngoài giờ cao điểm; dùng IP/proxy hợp lệ.
 * Tái sử dụng `requests.Session()` (đã làm sẵn) để giữ cookie.
 * Tôn trọng robots & điều khoản website.
@@ -153,42 +187,41 @@ df.to_excel("topcv_data_analyst_jobs.xlsx", index=False)
 
 ---
 
-## 🧩 Các cột chính
+## 🚀 Orchestration với Airflow
 
-* **Job (search):** `title`, `job_url`, `company`, `company_url`, `salary_list`, `address_list`, `exp_list`
-* **Job (detail):** `detail_title`, `detail_salary`, `detail_location`, `detail_experience`, `deadline`, `tags`,
-  `desc_mota`, `desc_yeucau`, `desc_quyenloi`, `working_addresses`, `working_times`, `company_url_from_job`
-* **Company:** `company_name_full`, `company_website`, `company_size`, `company_industry`, `company_address`, `company_description`
+Repo đi kèm stack Airflow (Docker Compose).
 
-> `company_url_from_job` có thể khác `company_url` (ưu tiên link trên trang job nếu có).
+Chạy:
 
----
+```bash
+cd airflow
+docker compose up -d
+```
 
-## 🧰 Troubleshooting
+Airflow sẽ khởi động (web UI [http://localhost:8080](http://localhost:8080)).
+Trong UI, bật DAG **`topcv_pipeline_daily_v2`** hoặc **v3** để pipeline tự động:
 
-* **429 Too Many Requests**
-  Tăng delay (xem phần “Điều chỉnh tốc độ”), giảm số trang, chạy chậm lại.
-
-* **HTML thay đổi**
-  DOM của TopCV có thể update. Ưu tiên các selector “dựa trên tiêu đề” (ví dụ `Mức lương`, `Địa điểm`, `Kinh nghiệm`) để giảm rủi ro vỡ.
-
-* **Selenium & Chrome**
-  Chỉ cần nếu bạn muốn bắt network nâng cao hoặc trang render mạnh bằng JS. Script hiện tại không phụ thuộc Selenium.
+* `run_scraper_with_uv` → chạy script crawl.
+* `save_csv_and_xlsx` → đảm bảo CSV, chuyển sang XLSX.
+* `upload_to_google_sheets` → đẩy dữ liệu lên Google Sheets (qua Service Account).
 
 ---
 
-## 🗺️ Lộ trình mở rộng
+## 🗺️ Hướng mở rộng
 
-* Thêm phân loại keyword (Python/SQL/BI, v.v.) từ mô tả yêu cầu.
-* Chuẩn hóa địa điểm/tỉnh thành, chuẩn hoá mức lương.
-* Lưu DB (SQLite/Postgres) + incremental update theo `job_id`.
-* Thêm CLI flag: `--start-page`, `--end-page`, `--delay-min`, `--delay-max`, `--query`.
+* Chuẩn hóa dữ liệu (địa điểm, lương).
+* Crawl thêm từ khóa khác (Data Engineer, BI, ML…).
+* Lưu DB (Postgres) thay vì file.
+* Dashboard bằng Power BI/Metabase.
+* Tự động phân tích thị trường tuyển dụng từ dữ liệu đã crawl.
 
 ---
 
 ## 📄 License
 
-MIT — dùng thoải mái cho mục đích học tập & nghiên cứu.
-**Lưu ý:** Hãy tôn trọng điều khoản sử dụng của TopCV và không gây tải lớn lên hệ thống.
+MIT — dùng cho mục đích học tập & nghiên cứu.
+⚠️ Tôn trọng điều khoản sử dụng của TopCV, không gây tải nặng.
+
+```
 
 ---
