@@ -16,14 +16,20 @@ Crawler nhẹ nhàng để thu thập tin tuyển dụng **Data Analyst** trên 
 
 ```
 .
-├── README.md
+├── airflow
+│   ├── dags
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   └── requirements.txt
+├── scripts
+│   ├── scrape_topcv_company.py # Script chính
+│   └── topcv.ipynb # Notebook thử nghiệm
+├── data-files
+│   ├── topcv_data_analyst_jobs.csv  # Kết quả CSV (ví dụ)
+│   └── topcv_data_analyst_jobs.xlsx # Kết quả XLSX (tuỳ chọn)
 ├── pyproject.toml
-├── scrape_topcv_company.py        # Script chính
-├── topcv.ipynb                    # Notebook thử nghiệm
-├── topcv_data_analyst_jobs.csv    # Kết quả CSV (ví dụ)
-├── topcv_data_analyst_jobs.xlsx   # Kết quả XLSX (tuỳ chọn)
-├── uv.lock
-...
+├── README.md
+└── uv.lock
 ```
 
 ---
@@ -87,6 +93,7 @@ https://www.topcv.vn/tim-viec-lam-data-analyst?type_keyword=1&page={page}&sba=1
 Chạy:
 
 ```bash
+cd scripts
 uv run scrape_topcv_company.py
 ```
 

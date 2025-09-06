@@ -367,10 +367,10 @@ def crawl_to_dataframe(query_url_template: str, start_page: int = 1, end_page: i
 
 if __name__ == "__main__":
     qtpl = "https://www.topcv.vn/tim-viec-lam-data-analyst?type_keyword=1&page={page}&sba=1"
-    df = crawl_to_dataframe(qtpl, start_page=1, end_page=2, delay_between_pages=(0.5, 1))
+    df = crawl_to_dataframe(qtpl, start_page=1, end_page=1, delay_between_pages=(0.5, 1)) # thay end_page=5 nếu muốn nhiều trang hơn (5 trang)
     print(df.head())
-    df.to_csv("topcv_data_analyst_jobs.csv", index=False, encoding="utf-8-sig")
+    df.to_csv("../data-files/topcv_data_analyst_jobs.csv", index=False, encoding="utf-8-sig")
     print("Saved CSV: topcv_data_analyst_jobs.csv")
 
-    df.to_excel("topcv_data_analyst_jobs.xlsx")
+    df.to_excel("../data-files/topcv_data_analyst_jobs.xlsx")
     print("Saved Excel: topcv_data_analyst_jobs.xlsx")
