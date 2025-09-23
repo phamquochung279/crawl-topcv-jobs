@@ -5,8 +5,10 @@ import random
 from typing import Dict, List, Optional
 from urllib.parse import urljoin, urlparse
 
+import openpyxl
 import requests
 from bs4 import BeautifulSoup
+import os
 import pandas as pd
 from urllib3.util.retry import Retry
 from requests.adapters import HTTPAdapter
@@ -365,12 +367,27 @@ def crawl_to_dataframe(query_url_template: str, start_page: int = 1, end_page: i
     cols = [c for c in cols if c in df.columns]
     return df.loc[:, cols] if cols else df
 
-if __name__ == "__main__":
-    qtpl = "https://www.topcv.vn/tim-viec-lam-data-analyst?type_keyword=1&page={page}&sba=1"
-    df = crawl_to_dataframe(qtpl, start_page=1, end_page=1, delay_between_pages=(0.5, 1)) # thay end_page=5 nếu muốn nhiều trang hơn (5 trang)
-    print(df.head())
-    df.to_csv("../data-files/topcv_data_analyst_jobs.csv", index=False, encoding="utf-8-sig")
-    print("Saved CSV: topcv_data_analyst_jobs.csv")
+def get_project_root():
+    """
+    Lấy link thư mục gốc của project 1 cách linh hoạt --> phần code lưu file sẽ chạy đúng trong cả Airflow và local, cả Jupyter notebook lẫn Python script.
+    """
+    env_root = os.environ.get("PROJECT_ROOT")
+    if env_root:
+        return env_root
+    try:
+        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    except NameError:
+        return os.path.dirname(os.getcwd())
 
-    df.to_excel("../data-files/topcv_data_analyst_jobs.xlsx")
-    print("Saved Excel: topcv_data_analyst_jobs.xlsx")
+if __name__ == "__main__":
+    # qtpl = "https://www.topcv.vn/tim-viec-lam-data-analyst?type_keyword=1&page={page}&sba=1"
+    df = pd.DataFrame()
+    # df = crawl_to_dataframe(qtpl, start_page=1, end_page=1, delay_between_pages=(0.5, 1)) # thay end_page=5 nếu muốn nhiều trang hơn (5 trang)
+    print(df.head())
+
+    project_root = get_project_root()
+    csv_file = os.path.join(project_root, "data-files", "topcv_data_analyst_jobs.csv")
+    excel_file = os.path.join(project_root, "data-files", "topcv_data_analyst_jobs.xlsx")
+
+    df.to_csv(csv_file, index=False, encoding="utf-8-sig")
+    df.to_excel(excel_file)
