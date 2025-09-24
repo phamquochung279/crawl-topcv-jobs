@@ -369,7 +369,7 @@ def crawl_to_dataframe(query_url_template: str, start_page: int = 1, end_page: i
 
 def get_project_root():
     """
-    Lấy link thư mục gốc của project 1 cách linh hoạt --> phần code lưu file sẽ chạy đúng trong cả Airflow và local, cả Jupyter notebook lẫn Python script.
+    Lấy link thư mục gốc của project 1 cách linh hoạt --> phần code lưu file csv & xlsx dưới đây sẽ chạy đúng trong cả Airflow và local, với cả Jupyter Notebook lẫn Python script.
     """
     env_root = os.environ.get("PROJECT_ROOT")
     if env_root:
@@ -380,9 +380,9 @@ def get_project_root():
         return os.path.dirname(os.getcwd())
 
 if __name__ == "__main__":
-    # qtpl = "https://www.topcv.vn/tim-viec-lam-data-analyst?type_keyword=1&page={page}&sba=1"
-    df = pd.DataFrame()
-    # df = crawl_to_dataframe(qtpl, start_page=1, end_page=1, delay_between_pages=(0.5, 1)) # thay end_page=5 nếu muốn nhiều trang hơn (5 trang)
+    qtpl = "https://www.topcv.vn/tim-viec-lam-data-analyst?type_keyword=1&page={page}&sba=1"
+    # df = pd.DataFrame()
+    df = crawl_to_dataframe(qtpl, start_page=1, end_page=1, delay_between_pages=(0.5, 1)) # thay end_page=5 nếu muốn nhiều trang hơn (5 trang)
     print(df.head())
 
     project_root = get_project_root()
